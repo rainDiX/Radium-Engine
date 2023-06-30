@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Core/Geometry/IndexedGeometry.hpp>
 #include <Core/Asset/GeometryData.hpp>
 #include <Core/Containers/VectorArray.hpp>
 #include <Core/Geometry/MeshPrimitives.hpp>
@@ -455,6 +456,23 @@ class RA_ENGINE_API GeometryDisplayable : public AttribArrayDisplayable
     /// Core::Mesh attrib name to Render::Mesh attrib name
     /// key: core mesh name, value: shader name
     BijectiveAssociation<std::string, std::string> m_translationTable {};
+};
+
+/// A PointCloud with indices
+class RA_ENGINE_API IndexedPointCloud : public IndexedGeometry<Core::Geometry::IndexedPointCloud>
+{
+    using base = IndexedGeometry<Core::Geometry::IndexedPointCloud>;
+
+  public:
+    using base::IndexedGeometry;
+    inline explicit IndexedPointCloud(
+        const std::string& name,
+        typename base::CoreGeometry&& geom,
+        typename base::MeshRenderMode renderMode = base::MeshRenderMode::RM_POINTS );
+
+    inline explicit IndexedPointCloud( const std::string& name,
+                                       MeshRenderMode renderMode = RM_POINTS );
+    void loadGeometry( Core::Geometry::IndexedPointCloud&& mesh ) override;
 };
 
 /// LineMesh, own a Core::Geometry::LineMesh
@@ -934,6 +952,19 @@ PointCloud::PointCloud( const std::string& name,
 }
 
 PointCloud::PointCloud( const std::string& name, typename base::MeshRenderMode renderMode ) :
+    base( name, renderMode ) {}
+
+///////// IndexedPointCloud //////////
+
+IndexedPointCloud::IndexedPointCloud( const std::string& name,
+                                      typename base::CoreGeometry&& geom,
+                                      typename base::MeshRenderMode renderMode ) :
+    base( name, renderMode ) {
+    loadGeometry( std::move( geom ) );
+}
+
+IndexedPointCloud::IndexedPointCloud( const std::string& name,
+                                      typename base::MeshRenderMode renderMode ) :
     base( name, renderMode ) {}
 
 /////////  LineMesh ///////////

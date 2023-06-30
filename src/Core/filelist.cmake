@@ -78,6 +78,7 @@ set(core_headers
     Containers/AlignedAllocator.hpp
     Containers/AlignedStdVector.hpp
     Containers/Grid.hpp
+    Containers/KdTree.hpp
     Containers/Iterators.hpp
     Containers/MakeShared.hpp
     Containers/Tex.hpp

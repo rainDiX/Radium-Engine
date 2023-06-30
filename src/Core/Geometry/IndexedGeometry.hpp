@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Core/CoreMacros.hpp"
+#include <Core/Containers/KdTree.hpp>
 #include <Core/Containers/VectorArray.hpp>
 #include <Core/Geometry/TriangleMesh.hpp>
 #include <Core/Utils/ContainerIntrospectionInterface.hpp>
@@ -599,7 +601,27 @@ class IndexedGeometry : public MultiIndexedGeometry
 };
 
 class RA_CORE_API IndexedPointCloud : public IndexedGeometry<Vector1ui>
-{};
+{
+  public:
+    void buildKdTree();
+    void clearKdTree();
+    int getKdTreeNodeCount() const;
+    int getKdTreeLeafCount() const;
+    int getKdTreeIndexCount() const;
+    const VectorArray<KdTreeNode>& getKdTreeNodeData() const;
+
+    KdTreeKNearestPointQuery kNearestNeighbors( const Vector3& point, int k ) const;
+    KdTreeKNearestIndexQuery kNearestNeighbors( int index, int k ) const;
+
+    KdTreeNearestPointQuery nearestNeighbor( const Vector3& point ) const;
+    KdTreeNearestIndexQuery nearestNeighbor( int index ) const;
+
+    KdTreeRangePointQuery rangeNeighbors( const Vector3& point, Scalar r ) const;
+    KdTreeRangeIndexQuery rangeNeighbors( int index, Scalar r ) const;
+
+  private:
+    KdTree m_kdTree;
+};
 
 class RA_CORE_API TriangleMesh : public IndexedGeometry<Vector3ui>
 {};

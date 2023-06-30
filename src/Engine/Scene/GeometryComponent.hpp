@@ -131,7 +131,7 @@ class RA_ENGINE_API PointCloudComponent : public GeometryComponent
      */
     PointCloudComponent( const std::string& name,
                          Entity* entity,
-                         Core::Geometry::PointCloud&& mesh,
+                         Core::Geometry::IndexedPointCloud&& mesh,
                          Core::Asset::MaterialData* mat = nullptr );
 
     ~PointCloudComponent() override;
@@ -139,8 +139,8 @@ class RA_ENGINE_API PointCloudComponent : public GeometryComponent
     void initialize() override;
 
     /// Returns the current display geometry.
-    const Ra::Core::Geometry::PointCloud& getCoreGeometry() const;
-    Data::PointCloud* getGeometry();
+    const Ra::Core::Geometry::IndexedPointCloud& getCoreGeometry() const;
+    Data::IndexedPointCloud* getGeometry();
 
     /// set the splat size for rendering
     inline void setSplatSize( float s ) { m_splatSize = s; }
@@ -159,12 +159,12 @@ class RA_ENGINE_API PointCloudComponent : public GeometryComponent
     void finalizeROFromGeometry( const Core::Asset::MaterialData* data, Core::Transform transform );
 
     // Give access to the mesh and (if deformable) to update it
-    const Ra::Core::Geometry::PointCloud* getMeshOutput() const;
-    Ra::Core::Geometry::PointCloud* getPointCloudRw();
+    const Ra::Core::Geometry::IndexedPointCloud* getMeshOutput() const;
+    Ra::Core::Geometry::IndexedPointCloud* getPointCloudRw();
 
   private:
     // directly hold a reference to the displayMesh to simplify accesses in handlers
-    std::shared_ptr<Data::PointCloud> m_displayMesh { nullptr };
+    std::shared_ptr<Data::IndexedPointCloud> m_displayMesh { nullptr };
     // The diameter of the splat when rendered
     float m_splatSize { 0.0025f };
 };

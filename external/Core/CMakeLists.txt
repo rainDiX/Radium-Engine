@@ -100,3 +100,22 @@ if(NOT DEFINED nlohmann_json_DIR)
 else()
     status_message("" "nlohmann_json" ${nlohmann_json_DIR})
 endif()
+
+if(NOT DEFINED ponca_DIR)
+    check_externals_prerequisite()
+    status_message("" "ponca" "remote git")
+    ExternalProject_Add(
+        ponca
+        GIT_REPOSITORY https://github.com/poncateam/ponca/
+        GIT_TAG origin/master
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+        INSTALL_DIR "${CMAKE_INSTALL_PREFIX}"
+        CMAKE_ARGS ${RADIUM_EXTERNAL_CMAKE_OPTIONS} -DPONCA_CONFIGURE_EXAMPLES=ON -DPONCA_CONFIGURE_DOC=OFF
+                   -DPONCA_CONFIGURE_TESTS=OFF "-DCMAKE_MESSAGE_INDENT=${indent_string}\;"
+    )
+    add_dependencies(CoreExternals ponca)
+    set_external_dir(ponca "lib/cmake/ponca/")
+else()
+    status_message("" "ponca" ${ponca_DIR})
+endif()

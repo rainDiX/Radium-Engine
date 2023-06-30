@@ -36,7 +36,7 @@ SurfaceMeshComponent<Ra::Core::Geometry::MultiIndexedGeometry>::SurfaceMeshCompo
     Ra::Core::Geometry::MultiIndexedGeometry&& mesh,
     Core::Asset::MaterialData* mat ) :
     GeometryComponent( name, entity ),
-    m_displayMesh( new Data::GeometryDisplayable( name, std::move( mesh ) ) ) {
+    m_displayMesh( std::make_shared<Data::GeometryDisplayable>( name, std::move( mesh ) ) ) {
     setContentName( name );
     finalizeROFromGeometry( mat, Core::Transform::Identity() );
 }
@@ -78,10 +78,10 @@ PointCloudComponent::PointCloudComponent( const std::string& name,
 
 PointCloudComponent::PointCloudComponent( const std::string& name,
                                           Entity* entity,
-                                          Core::Geometry::PointCloud&& mesh,
+                                          Core::Geometry::IndexedPointCloud&& mesh,
                                           Core::Asset::MaterialData* mat ) :
     GeometryComponent( name, entity ),
-    m_displayMesh( new Data::PointCloud( name, std::move( mesh ) ) ) {
+    m_displayMesh( new Data::IndexedPointCloud( name, std::move( mesh ) ) ) {
     finalizeROFromGeometry( mat, Core::Transform::Identity() );
 }
 
@@ -94,10 +94,10 @@ void PointCloudComponent::initialize() {}
 
 void PointCloudComponent::generatePointCloud( const Ra::Core::Asset::GeometryData* data ) {
     m_contentName = data->getName();
-    m_displayMesh = Ra::Core::make_shared<Data::PointCloud>( m_contentName );
+    m_displayMesh = Ra::Core::make_shared<Data::IndexedPointCloud>( m_contentName );
     m_displayMesh->setRenderMode( Data::AttribArrayDisplayable::RM_POINTS );
 
-    Ra::Core::Geometry::PointCloud mesh;
+    Ra::Core::Geometry::IndexedPointCloud mesh;
 
     // add custom attribs
     mesh.vertexAttribs().copyAllAttributes( data->getGeometry().vertexAttribs() );
@@ -139,12 +139,12 @@ void PointCloudComponent::finalizeROFromGeometry( const Core::Asset::MaterialDat
     m_roIndex = addRenderObject( ro );
 }
 
-const Ra::Core::Geometry::PointCloud& PointCloudComponent::getCoreGeometry() const {
+const Ra::Core::Geometry::IndexedPointCloud& PointCloudComponent::getCoreGeometry() const {
     CHECK_MESH_NOT_NULL;
     return m_displayMesh->getCoreGeometry();
 }
 
-Data::PointCloud* PointCloudComponent::getGeometry() {
+Data::IndexedPointCloud* PointCloudComponent::getGeometry() {
     CHECK_MESH_NOT_NULL;
     return m_displayMesh.get();
 }
@@ -156,17 +156,17 @@ void PointCloudComponent::setupIO( const std::string& id ) {
 
     const auto& cm = ComponentMessenger::getInstance();
 
-    cm->registerOutput<Ra::Core::Geometry::PointCloud>( getEntity(), this, id, cbOut );
-    cm->registerReadWrite<Ra::Core::Geometry::PointCloud>( getEntity(), this, id, cbRw );
+    cm->registerOutput<Ra::Core::Geometry::IndexedPointCloud>( getEntity(), this, id, cbOut );
+    cm->registerReadWrite<Ra::Core::Geometry::IndexedPointCloud>( getEntity(), this, id, cbRw );
     base::setupIO( id );
 }
 
-const Ra::Core::Geometry::PointCloud* PointCloudComponent::getMeshOutput() const {
+const Ra::Core::Geometry::IndexedPointCloud* PointCloudComponent::getMeshOutput() const {
     CHECK_MESH_NOT_NULL;
     return &m_displayMesh->getCoreGeometry();
 }
 
-Ra::Core::Geometry::PointCloud* PointCloudComponent::getPointCloudRw() {
+Ra::Core::Geometry::IndexedPointCloud* PointCloudComponent::getPointCloudRw() {
     CHECK_MESH_NOT_NULL;
     return &( m_displayMesh->getCoreGeometry() );
 }

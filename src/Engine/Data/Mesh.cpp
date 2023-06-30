@@ -467,6 +467,15 @@ void PointCloud::updateGL_specific_impl() {
     if ( !m_vao ) { m_vao = globjects::VertexArray::create(); }
 }
 
+void IndexedPointCloud::loadGeometry( Core::Geometry::IndexedPointCloud&& mesh ) {
+    setIndicesDirty();
+    base::loadGeometry_common( std::move( mesh ) );
+
+    // indices
+    base::m_mesh.attach( IndicesObserver( this ) );
+    m_mesh.buildKdTree();
+}
+
 } // namespace Data
 } // namespace Engine
 } // namespace Ra

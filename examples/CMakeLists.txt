@@ -23,6 +23,7 @@ foreach(
     MaterialEdition
     ParameterEdition
     Picking
+    PointCloudRendering
     RawShaderMaterial
     SimpleAnimation
     SimpleSimulation

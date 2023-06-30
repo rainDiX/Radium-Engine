@@ -1,5 +1,9 @@
+#include <Core/Containers/KdTree.hpp>
+#include <Core/Containers/VectorArray.hpp>
+#include <Core/Types.hpp>
 #include <Core/Geometry/IndexedGeometry.hpp>
 
+#include <Ponca/src/SpatialPartitioning/KdTree/kdTree.h>
 #include <iterator>
 
 namespace Ra {
@@ -264,6 +268,59 @@ void PointCloudIndexLayer::linearIndices( const AttribArrayGeometry& attr ) {
     auto nbVert = attr.vertices().size();
     collection().resize( nbVert );
     collection().getMap() = IndexContainerType::Matrix::LinSpaced( nbVert, 0, nbVert - 1 );
+}
+
+void IndexedPointCloud::buildKdTree() {
+    auto& data = vertices();
+    m_kdTree.build( data );
+    auto& indices = getIndicesWithLock();
+    indices.reserve( m_kdTree.index_count() );
+    for ( const auto& intIndex : m_kdTree.index_data() ) {
+        Vector1ui index;
+        index << static_cast<uint>( intIndex ); // Convert int to uint and assign to the matrix
+        indices.push_back( index );             // Add the matrix to the vector
+    }
+    indicesUnlock();
+}
+
+void IndexedPointCloud::clearKdTree() {
+    m_kdTree.clear();
+}
+int IndexedPointCloud::getKdTreeNodeCount() const {
+    return m_kdTree.node_count();
+}
+
+int IndexedPointCloud::getKdTreeLeafCount() const {
+    return m_kdTree.leaf_count();
+}
+
+int IndexedPointCloud::getKdTreeIndexCount() const {
+    return m_kdTree.index_count();
+}
+
+const VectorArray<KdTreeNode>& IndexedPointCloud::getKdTreeNodeData() const {
+    return m_kdTree.node_data();
+}
+
+KdTreeKNearestPointQuery IndexedPointCloud::kNearestNeighbors( const Vector3& point, int k ) const {
+    return m_kdTree.k_nearest_neighbors( point, k );
+}
+KdTreeKNearestIndexQuery IndexedPointCloud::kNearestNeighbors( int index, int k ) const {
+    return m_kdTree.k_nearest_neighbors( index, k );
+}
+
+KdTreeNearestPointQuery IndexedPointCloud::nearestNeighbor( const Vector3& point ) const {
+    return m_kdTree.nearest_neighbor( point );
+}
+KdTreeNearestIndexQuery IndexedPointCloud::nearestNeighbor( int index ) const {
+    return m_kdTree.nearest_neighbor( index );
+}
+
+KdTreeRangePointQuery IndexedPointCloud::rangeNeighbors( const Vector3& point, Scalar r ) const {
+    return m_kdTree.range_neighbors( point, r );
+}
+KdTreeRangeIndexQuery IndexedPointCloud::rangeNeighbors( int index, Scalar r ) const {
+    return m_kdTree.range_neighbors( index, r );
 }
 
 } // namespace Geometry
