@@ -28,7 +28,7 @@ class SimpleSimulationSystem : public Ra::Engine::Scene::System
     }
 
   public:
-    inline SimpleSimulationSystem( Ra::Engine::Data::PointCloud* c = nullptr ) : m_cloud( c ) {}
+    inline SimpleSimulationSystem( Ra::Engine::Data::IndexedPointCloud* c = nullptr ) : m_cloud( c ) {}
 
     virtual void generateTasks( Ra::Core::TaskQueue* q,
                                 const Ra::Engine::FrameInfo& /*info*/ ) override {

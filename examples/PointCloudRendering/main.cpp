@@ -1,6 +1,8 @@
 // Include Radium base application and its simple Gui
+#include "Core/Containers/KdTree.hpp"
 #include "Core/Containers/VectorArray.hpp"
 #include "Core/Types.hpp"
+#include "Core/Utils/Index.hpp"
 #include <Core/Asset/FileLoaderInterface.hpp>
 #include <Engine/Data/DrawPrimitives.hpp>
 #include <Engine/Rendering/RenderObject.hpp>
@@ -30,61 +32,58 @@
 #include <memory>
 #include <string>
 
-void addBoundingBox( Ra::Core::VectorArray<Ra::Core::Aabb>& bbs,
-                     const Ra::Core::Vector3Array& vertices,
-                     int start,
-                     unsigned short size ) {
-    Ra::Core::Aabb aabb;
-    for ( int i = 0; i < size; ++i ) {
-        const auto& v = vertices[start + i];
-        aabb.extend( v );
+void extendBoundingBoxForNode( const Ra::Core::KdTreeNode& node,
+                               const Ra::Core::VectorArray<Ra::Core::KdTreeNode>& node_data,
+                               const Ra::Core::Vector3Array& vertices,
+                               Ra::Core::Aabb& aabb ) {
+    if ( !node.is_leaf() ) {
+        for ( int i = 0; i < 2; ++i ) {
+            extendBoundingBoxForNode(
+                node_data[node.inner.first_child_id + i], node_data, vertices, aabb );
+        }
     }
-    bbs.emplace_back( aabb );
+    else {
+        for ( int i = 0; i < node.leaf.size; ++i ) {
+            const auto& v = vertices[node.leaf.start + i];
+            aabb.extend( v );
+        }
+    }
 }
-Ra::Core::VectorArray<Ra::Core::Aabb>
-computeKdTreeLeafAabb( const Ra::Core::Vector3Array& vertices,
-                       const Ra::Core::VectorArray<Ra::Core::KdTreeNode>& nodes,
-                       int leaf_count ) {
-    auto bbs = Ra::Core::VectorArray<Ra::Core::Aabb>();
 
-    bbs.reserve( leaf_count );
+void recursive( const Ra::Core::KdTreeNode& node,
+                int currentDepth,
+                int depth,
+                const Ra::Core::VectorArray<Ra::Core::KdTreeNode>& node_data,
+                const Ra::Core::Vector3Array& vertices,
+                Ra::Core::VectorArray<Ra::Core::Aabb>& bbs ) {
+    if ( currentDepth < depth ) {
+        Ra::Core::Aabb aabb;
+        extendBoundingBoxForNode( node, node_data, vertices, aabb );
+        bbs.emplace_back( aabb );
 
-    for ( const auto& node : nodes ) {
-        if ( node.is_leaf() ) { addBoundingBox( bbs, vertices, node.leaf.start, node.leaf.size ); }
+        if ( !node.is_leaf() ) {
+            for ( int i = 0; i < 2; ++i ) {
+                recursive( node_data[node.inner.first_child_id + i],
+                           currentDepth + 1,
+                           depth,
+                           node_data,
+                           vertices,
+                           bbs );
+            }
+        }
     }
+}
+
+Ra::Core::VectorArray<Ra::Core::Aabb>
+computeKdTreeAabb( const Ra::Core::VectorArray<Ra::Core::KdTreeNode>& node_data,
+                   const Ra::Core::Vector3Array& vertices,
+                   int depth ) {
+    const auto& root = node_data[0];
+    auto bbs         = Ra::Core::VectorArray<Ra::Core::Aabb>();
+
+    recursive( root, 0, depth, node_data, vertices, bbs );
     return bbs;
 }
-
-// void addBoundingBoxForNode() {
-//     Ra::Core::Aabb aabb;
-//     // while () {
-//     // aabb.extend(  );
-//     // }
-// }
-
-// void r( const KdTreeNode& node,
-//         int currentDepth,
-//         int depth,
-//         const VectorArray<KdTreeNode>& node_data,
-//         VectorArray<Aabb>& bbs ) {
-//     if ( currentDepth < depth ) {
-
-//         if ( !node.is_leaf() ) {
-//             r( node_data[node.inner.first_child_id], currentDepth + 1, depth, node_data, bbs );
-//             // r(node_data[node.inner.], currentDepth + 1, depth, node_data);//TODO
-//         }
-//     }
-// }
-
-// Ra::Core::VectorArray<Ra::Core::Aabb> computeKdTreeAabb( int depth ) {
-//     const auto& node_data = m_kdTree.node_data();
-//     const auto& root      = node_data[0];
-//     auto bbs              = Ra::Core::VectorArray<Ra::Core::Aabb>();
-
-//     // bbs.reserve( m_kdTree->node_count() ); // to change
-//     r( root, 0, depth, node_data, bbs );
-//     return bbs;
-// }
 
 class DemoWindow : public Ra::Gui::SimpleWindow
 {
@@ -136,19 +135,19 @@ class DemoWindow : public Ra::Gui::SimpleWindow
         };
         connect( fileOpenAction, &QAction::triggered, openFile );
 
-        //! [Adding a keybinding to show the bounding boxes]
-        auto viewer = getViewer();
+        // add the menu bar
+        setMenuBar( menuBar );
+    }
 
-        viewer->addCustomAction(
+    void configure() override {
+        //! [Adding a keybinding to show the bounding boxes]
+        DEMO_TOGGLE = getViewer()->addCustomAction(
             "ShowBoundingBoxes",
             Ra::Gui::KeyMappingManager::createEventBindingFromStrings( "", "", "Key_B" ),
             [=]( QEvent* e ) {
                 if ( e->type() == QEvent::KeyPress ) toggleBoundingBoxes();
             } );
         //! [Adding a keybinding to show the bounding boxes]
-
-        // add the menu bar
-        setMenuBar( menuBar );
     }
 
     void toggleBoundingBoxes() {
@@ -160,20 +159,11 @@ class DemoWindow : public Ra::Gui::SimpleWindow
                 auto pointcloud =
                     dynamic_cast<Ra::Engine::Scene::PointCloudComponent*>( component.get() );
                 if ( pointcloud ) {
-                    auto aabb        = pointcloud->computeAabb();
-                    auto bbEntity    = new Ra::Engine::Scene::Entity( entity->getName() + "BB" );
-                    auto bbComponent = new Ra::Engine::Scene::DebugComponent( bbEntity );
-                    engine->getRenderObjectManager()->addRenderObject(
-                        Ra::Engine::Data::DrawPrimitives::Primitive(
-                            bbComponent,
-                            Ra::Engine::Data::DrawPrimitives::AABB(
-                                aabb, Ra::Core::Utils::Color::Cyan() ) ) );
                     int counter    = 0;
                     auto& pcgeom   = pointcloud->getCoreGeometry();
                     auto& vertices = pcgeom.vertices();
-                    auto aabs      = computeKdTreeLeafAabb( pcgeom.vertices(),
-                                                       pcgeom.getKdTreeNodeData(),
-                                                       pcgeom.getKdTreeLeafCount() );
+                    auto aabs =
+                        computeKdTreeAabb( pcgeom.getKdTreeNodeData(), pcgeom.vertices(), 6 );
                     for ( auto aabb : aabs ) {
                         auto bbEntity    = new Ra::Engine::Scene::Entity( entity->getName() + "BB" +
                                                                        std::to_string( counter ) );
@@ -192,7 +182,10 @@ class DemoWindow : public Ra::Gui::SimpleWindow
     }
 
   private:
+    bool m_bbsCalculated = false;
     Ra::Core::VectorArray<Ra::Core::Aabb> m_aabbs;
+    Ra::Core::VectorArray<Ra::Core::Utils::Index> m_indices;
+    Ra::Gui::KeyMappingManager::KeyMappingAction DEMO_TOGGLE;
 };
 
 class DemoWindowFactory : public Ra::Gui::BaseApplication::WindowFactory
