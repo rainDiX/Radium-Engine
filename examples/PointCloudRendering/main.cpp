@@ -55,11 +55,11 @@ void recursive( const Ra::Core::KdTreeNode& node,
                 int depth,
                 const Ra::Core::VectorArray<Ra::Core::KdTreeNode>& node_data,
                 const Ra::Core::Vector3Array& vertices,
-                Ra::Core::VectorArray<Ra::Core::Aabb>& bbs ) {
+                Ra::Core::VectorArray<std::pair<int, Ra::Core::Aabb>>& bbs ) {
     if ( currentDepth < depth ) {
         Ra::Core::Aabb aabb;
         extendBoundingBoxForNode( node, node_data, vertices, aabb );
-        bbs.emplace_back( aabb );
+        bbs.emplace_back( std::make_pair( currentDepth, aabb ) );
 
         if ( !node.is_leaf() ) {
             for ( int i = 0; i < 2; ++i ) {
@@ -74,12 +74,12 @@ void recursive( const Ra::Core::KdTreeNode& node,
     }
 }
 
-Ra::Core::VectorArray<Ra::Core::Aabb>
+Ra::Core::VectorArray<std::pair<int, Ra::Core::Aabb>>
 computeKdTreeAabb( const Ra::Core::VectorArray<Ra::Core::KdTreeNode>& node_data,
                    const Ra::Core::Vector3Array& vertices,
                    int depth ) {
     const auto& root = node_data[0];
-    auto bbs         = Ra::Core::VectorArray<Ra::Core::Aabb>();
+    auto bbs         = Ra::Core::VectorArray<std::pair<int, Ra::Core::Aabb>>();
 
     recursive( root, 0, depth, node_data, vertices, bbs );
     return bbs;
@@ -162,18 +162,19 @@ class DemoWindow : public Ra::Gui::SimpleWindow
                     int counter    = 0;
                     auto& pcgeom   = pointcloud->getCoreGeometry();
                     auto& vertices = pcgeom.vertices();
-                    auto aabs =
-                        computeKdTreeAabb( pcgeom.getKdTreeNodeData(), pcgeom.vertices(), 6 );
-                    for ( auto aabb : aabs ) {
+                    int depth      = 6;
+                    auto aabbs =
+                        computeKdTreeAabb( pcgeom.getKdTreeNodeData(), pcgeom.vertices(), depth );
+                    for ( auto aabb : aabbs ) {
                         auto bbEntity    = new Ra::Engine::Scene::Entity( entity->getName() + "BB" +
                                                                        std::to_string( counter ) );
                         auto bbComponent = new Ra::Engine::Scene::DebugComponent( bbEntity );
-                        float hue        = float( counter ) / aabs.size();
+                        float hue        = float( aabb.first ) / depth;
                         engine->getRenderObjectManager()->addRenderObject(
                             Ra::Engine::Data::DrawPrimitives::Primitive(
                                 bbComponent,
                                 Ra::Engine::Data::DrawPrimitives::AABB(
-                                    aabb, Ra::Core::Utils::Color::fromHSV( hue ) ) ) );
+                                    aabb.second, Ra::Core::Utils::Color::fromHSV( hue ) ) ) );
                         ++counter;
                     }
                 }
