@@ -1,6 +1,7 @@
 // Include Radium base application and its simple Gui
 #include "Core/Containers/KdTree.hpp"
 #include "Core/Containers/VectorArray.hpp"
+#include "Core/Geometry/IndexedGeometry.hpp"
 #include "Core/Types.hpp"
 #include "Core/Utils/Index.hpp"
 #include <Core/Asset/FileLoaderInterface.hpp>
@@ -39,19 +40,21 @@
 #include <qlayout.h>
 #include <string>
 
-void extendBoundingBoxForNode( const Ra::Core::KdTreeNode& node,
-                               const Ra::Core::VectorArray<Ra::Core::KdTreeNode>& node_data,
-                               const Ra::Core::Vector3Array& vertices,
-                               Ra::Core::Aabb& aabb ) {
+void extendBoundingBoxForNode(
+    const Ra::Core::KdTreeNode& node,
+    const Ra::Core::VectorArray<Ra::Core::KdTreeNode>& node_data,
+    const Ra::Core::Geometry::IndexedPointCloud::IndexContainerType& indices,
+    const Ra::Core::Vector3Array& vertices,
+    Ra::Core::Aabb& aabb ) {
     if ( !node.is_leaf() ) {
         for ( int i = 0; i < 2; ++i ) {
             extendBoundingBoxForNode(
-                node_data[node.inner.first_child_id + i], node_data, vertices, aabb );
+                node_data[node.inner.first_child_id + i], node_data, indices, vertices, aabb );
         }
     }
     else {
         for ( int i = 0; i < node.leaf.size; ++i ) {
-            const auto& v = vertices[node.leaf.start + i];
+            const auto& v = vertices[indices[node.leaf.start + i][0]];
             aabb.extend( v );
         }
     }
@@ -61,11 +64,13 @@ void recursive( const Ra::Core::KdTreeNode& node,
                 int currentDepth,
                 int depth,
                 const Ra::Core::VectorArray<Ra::Core::KdTreeNode>& node_data,
+                const Ra::Core::Geometry::IndexedPointCloud::IndexContainerType& indices,
                 const Ra::Core::Vector3Array& vertices,
                 Ra::Core::VectorArray<std::pair<int, Ra::Core::Aabb>>& bbs ) {
     if ( currentDepth < depth ) {
         Ra::Core::Aabb aabb;
-        extendBoundingBoxForNode( node, node_data, vertices, aabb );
+
+        extendBoundingBoxForNode( node, node_data, indices, vertices, aabb );
         bbs.emplace_back( std::make_pair( currentDepth, aabb ) );
 
         if ( !node.is_leaf() ) {
@@ -75,6 +80,7 @@ void recursive( const Ra::Core::KdTreeNode& node,
                            currentDepth + 1,
                            depth,
                            node_data,
+                           indices,
                            vertices,
                            bbs );
             }
@@ -84,12 +90,13 @@ void recursive( const Ra::Core::KdTreeNode& node,
 
 Ra::Core::VectorArray<std::pair<int, Ra::Core::Aabb>>
 computeKdTreeAabb( const Ra::Core::VectorArray<Ra::Core::KdTreeNode>& node_data,
+                   const Ra::Core::Geometry::IndexedPointCloud::IndexContainerType& indices,
                    const Ra::Core::Vector3Array& vertices,
                    int depth ) {
     const auto& root = node_data[0];
     auto bbs         = Ra::Core::VectorArray<std::pair<int, Ra::Core::Aabb>>();
 
-    recursive( root, 0, depth, node_data, vertices, bbs );
+    recursive( root, 0, depth, node_data, indices, vertices, bbs );
     return bbs;
 }
 
@@ -202,8 +209,8 @@ class DemoWindow : public Ra::Gui::SimpleWindow
                     auto& pcgeom   = pointcloud->getCoreGeometry();
                     auto& vertices = pcgeom.vertices();
                     int depth      = 7;
-                    auto aabbs =
-                        computeKdTreeAabb( pcgeom.getKdTreeNodeData(), pcgeom.vertices(), depth );
+                    auto aabbs     = computeKdTreeAabb(
+                        pcgeom.getKdTreeNodeData(), pcgeom.getIndices(), pcgeom.vertices(), depth );
                     for ( auto aabb : aabbs ) {
                         auto bbEntity    = new Ra::Engine::Scene::Entity( entity->getName() + "BB" +
                                                                        std::to_string( counter ) );
