@@ -13,6 +13,7 @@ set(engine_sources
     Data/MaterialConverters.cpp
     Data/Mesh.cpp
     Data/PlainMaterial.cpp
+    Data/PointCloudMaterial.cpp
     Data/RawShaderMaterial.cpp
     Data/RenderParameters.cpp
     Data/ShaderConfigFactory.cpp
@@ -66,6 +67,7 @@ set(engine_headers
     Data/MaterialConverters.hpp
     Data/Mesh.hpp
     Data/PlainMaterial.hpp
+    Data/PointCloudMaterial.hpp
     Data/RawShaderMaterial.hpp
     Data/RenderParameters.hpp
     Data/ShaderConfigFactory.hpp
@@ -149,6 +151,10 @@ set(engine_shaders
     Materials/Plain/Plain.glsl
     Materials/Plain/Plain.vert.glsl
     Materials/Plain/PlainZPrepass.frag.glsl
+    Materials/PointCloud/PointCloud.frag.glsl
+    Materials/PointCloud/PointCloud.glsl
+    Materials/PointCloud/PointCloud.vert.glsl
+    Materials/PointCloud/PointCloudZPrepass.frag.glsl
     Materials/VertexAttribInterface.frag.glsl
     Materials/Volumetric/ComposeVolumeRender.frag.glsl
     Materials/Volumetric/Volumetric.frag.glsl

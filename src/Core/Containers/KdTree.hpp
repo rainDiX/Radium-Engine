@@ -3,8 +3,7 @@
 #include <Core/Containers/VectorArray.hpp>
 #include <Core/CoreMacros.hpp>
 #include <Core/Types.hpp>
-#include <Ponca/src/SpatialPartitioning/KdTree/Query/kdTreeKNearestPointQuery.h>
-#include <Ponca/src/SpatialPartitioning/KdTree/kdTree.h>
+#include <Ponca/SpatialPartitioning>
 
 namespace Ra {
 namespace Core {

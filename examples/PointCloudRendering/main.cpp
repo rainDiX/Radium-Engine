@@ -19,17 +19,24 @@
 #include <Engine/Scene/EntityManager.hpp>
 #include <Engine/Scene/GeometryComponent.hpp>
 #include <Engine/Scene/GeometrySystem.hpp>
+#include <Gui/Widgets/ControlPanel.hpp>
 
 // colors
 #include <Core/Utils/Color.hpp>
 
 #include <QAction>
+#include <QDockWidget>
 #include <QFileDialog>
+#include <QGroupBox>
+#include <QLabel>
 #include <QMenuBar>
 #include <QSettings>
 #include <QTimer>
+#include <QVBoxLayout>
+
 #include <iostream>
 #include <memory>
+#include <qlayout.h>
 #include <string>
 
 void extendBoundingBoxForNode( const Ra::Core::KdTreeNode& node,
@@ -62,6 +69,7 @@ void recursive( const Ra::Core::KdTreeNode& node,
         bbs.emplace_back( std::make_pair( currentDepth, aabb ) );
 
         if ( !node.is_leaf() ) {
+            std::cout << "level: " << currentDepth << " dim: " << node.inner.dim << std::endl;
             for ( int i = 0; i < 2; ++i ) {
                 recursive( node_data[node.inner.first_child_id + i],
                            currentDepth + 1,
@@ -137,6 +145,15 @@ class DemoWindow : public Ra::Gui::SimpleWindow
 
         // add the menu bar
         setMenuBar( menuBar );
+
+        // add the dock with a MaterialParameterEditor
+        m_dock = new QDockWidget( "Settings" );
+        m_dock->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
+
+        addDockWidget( Qt::LeftDockWidgetArea, m_dock );
+
+        connect(
+            getViewer(), &Ra::Gui::Viewer::rightClickPicking, this, &DemoWindow::handlePicking );
     }
 
     void configure() override {
@@ -148,6 +165,28 @@ class DemoWindow : public Ra::Gui::SimpleWindow
                 if ( e->type() == QEvent::KeyPress ) toggleBoundingBoxes();
             } );
         //! [Adding a keybinding to show the bounding boxes]
+    }
+
+    void setupControlPanel() {
+        if ( m_controlPanel != nullptr ) { delete m_controlPanel; }
+        m_controlPanel = new Ra::Gui::Widgets::ControlPanel( "Point Settings", false, this );
+        m_controlPanel->addLabel( m_Ro->getName() );
+        m_controlPanel->addPowerSliderInput(
+            "Point Size",
+            [this]( double value ) { std::cout << value << std::endl; },
+            0.5,
+            0.1,
+            5.0 );
+        m_controlPanel->addStretch();
+        m_dock->setWidget( m_controlPanel );
+    }
+
+    void handlePicking( const Ra::Engine::Rendering::Renderer::PickingResult& pickingResult ) {
+        if ( pickingResult.getRoIdx().isValid() ) {
+            auto roManager = Ra::Engine::RadiumEngine::getInstance()->getRenderObjectManager();
+            m_Ro           = roManager->getRenderObject( pickingResult.getRoIdx() );
+            setupControlPanel();
+        }
     }
 
     void toggleBoundingBoxes() {
@@ -162,7 +201,7 @@ class DemoWindow : public Ra::Gui::SimpleWindow
                     int counter    = 0;
                     auto& pcgeom   = pointcloud->getCoreGeometry();
                     auto& vertices = pcgeom.vertices();
-                    int depth      = 6;
+                    int depth      = 7;
                     auto aabbs =
                         computeKdTreeAabb( pcgeom.getKdTreeNodeData(), pcgeom.vertices(), depth );
                     for ( auto aabb : aabbs ) {
@@ -184,9 +223,12 @@ class DemoWindow : public Ra::Gui::SimpleWindow
 
   private:
     bool m_bbsCalculated = false;
+    std::shared_ptr<Ra::Engine::Rendering::RenderObject> m_Ro { nullptr };
     Ra::Core::VectorArray<Ra::Core::Aabb> m_aabbs;
     Ra::Core::VectorArray<Ra::Core::Utils::Index> m_indices;
     Ra::Gui::KeyMappingManager::KeyMappingAction DEMO_TOGGLE;
+    Ra::Gui::Widgets::ControlPanel* m_controlPanel { nullptr };
+    QDockWidget* m_dock { nullptr };
 };
 
 class DemoWindowFactory : public Ra::Gui::BaseApplication::WindowFactory
