@@ -1,7 +1,7 @@
 #include <Core/Containers/KdTree.hpp>
 #include <Core/Containers/VectorArray.hpp>
-#include <Core/Types.hpp>
 #include <Core/Geometry/IndexedGeometry.hpp>
+#include <Core/Types.hpp>
 
 #include <Ponca/src/SpatialPartitioning/KdTree/kdTree.h>
 #include <iterator>
@@ -276,9 +276,9 @@ void IndexedPointCloud::buildKdTree() {
     auto& indices = getIndicesWithLock();
     indices.reserve( m_kdTree.index_count() );
     for ( const auto& intIndex : m_kdTree.index_data() ) {
-        Vector1ui index;
-        index << static_cast<uint>( intIndex ); // Convert int to uint and assign to the matrix
-        indices.push_back( index );             // Add the matrix to the vector
+        indices.emplace_back(
+            static_cast<uint>( intIndex ) ); // Convert int to uint and assign to the matrix // Add
+                                             // the matrix to the vector
     }
     indicesUnlock();
 }
